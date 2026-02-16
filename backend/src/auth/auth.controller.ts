@@ -7,9 +7,11 @@ import {
   NotFoundException,
   UnauthorizedException,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthencationService } from './auth.service';
 import type { Response, Request } from 'express';
+import { ResetPasswordGuard } from './guards/resetpassword.guard';
 @Controller('api/auth')
 export class AuthencationController {
   constructor(private readonly authService: AuthencationService) {}
@@ -67,16 +69,17 @@ export class AuthencationController {
     return this.authService.forgotPassword(email);
   }
 
+  @UseGuards(ResetPasswordGuard)
   @Post('reset-password')
   async resetPassword(
     @Body('newPassword') newPassword: string,
     @Body('confirmNewPassword') confirmNewPassword: string,
-    @Body('token') token: string,
+    @Req() req: any,
   ) {
     return this.authService.resetPassword(
       newPassword,
       confirmNewPassword,
-      token,
+      req.resetUser, 
     );
   }
 
@@ -106,13 +109,13 @@ export class AuthencationController {
   }
 
   @Post('logout')
-  async logout(@Req() req: Request, @Res({ passthrough: true }) res : Response) {
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const token = req.cookies['refreshToken'];
 
     if (!token) {
       throw new UnauthorizedException('No refresh token');
     }
 
-    return this.authService.logout(token , res);
+    return this.authService.logout(token, res);
   }
 }

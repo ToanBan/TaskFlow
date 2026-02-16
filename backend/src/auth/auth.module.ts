@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { AuthencationController } from './auth.controller';
 import { AuthencationService } from './auth.service';
 import { MailModule } from 'src/mail/mail.module';
+import { ResetPasswordGuard } from './guards/resetpassword.guard';
 @Module({
   imports: [
     JwtModule.register({
@@ -13,7 +14,7 @@ import { MailModule } from 'src/mail/mail.module';
     MailModule,
   ],
   controllers: [AuthencationController],
-  providers: [AuthencationService],
+  providers: [AuthencationService, ResetPasswordGuard],
   exports: [JwtModule],
 })
 export class AuthencationModule {}

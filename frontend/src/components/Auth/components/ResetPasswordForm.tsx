@@ -31,6 +31,7 @@ const ResetPasswordForm = () => {
       setTimeout(() => {
         setError(false);
       }, 3000);
+      window.location.href = "/forgot"
     }
   };
 

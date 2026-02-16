@@ -186,7 +186,7 @@ export class AuthencationService {
   async resetPassword(
     newPassword: string,
     confirmNewPassword: string,
-    token: string,
+    payload: any,
   ) {
     if (!newPassword || !confirmNewPassword) {
       throw new BadRequestException('Missing password');
@@ -198,31 +198,13 @@ export class AuthencationService {
       );
     }
 
-    let payload: any;
-
-    try {
-      payload = this.jwtService.verify(token, {
-        secret: process.env.RESET_TOKEN,
-      });
-
-      console.log('payloaddddd', payload);
-    } catch (error) {
-      throw new BadRequestException('Token invalid or expired');
-    }
-
-    if (payload.type !== 'reset') {
-      throw new BadRequestException('Invalid token type');
-    }
-
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-
     await this.prisma.user.update({
       where: { id: payload.sub },
       data: {
         passwordHash: hashedPassword,
       },
     });
-
     return {
       message: 'Password reset successfully',
     };
@@ -312,7 +294,6 @@ export class AuthencationService {
         });
       }
 
-      // 🔥 Clear cookie đúng config
       res.clearCookie('refreshToken', {
         httpOnly: true,
         secure: false,
