@@ -9,6 +9,8 @@ import RegisterPage from "./pages/Register";
 import ForgotPasswordPage from "./pages/ForgotPassword";
 import ChangePasswordPage from "./pages/ChangePassword";
 import ResetPasswordPage from "./pages/ResetPassword";
+import Home from "./pages/Home";
+import Profile from "./pages/Profile";
 import "./index.css";
 function App() {
   return (
@@ -19,8 +21,10 @@ function App() {
         <Route path="/forgot" element={<ForgotPasswordPage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        {/* <Route path="/" element={<HomePage />} />
-        <Route path="/dashboard" element={<DashboardPage />} /> */}
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/" element={<Home />} />
+
+        {/* <Route path="/dashboard" element={<DashboardPage />} />  */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
