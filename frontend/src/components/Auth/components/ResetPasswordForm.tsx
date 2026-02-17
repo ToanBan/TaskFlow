@@ -19,7 +19,6 @@ const ResetPasswordForm = () => {
       confirmNewPassword,
       token,
     );
-    console.log(result);
     if (result) {
       setSuccess(true);
       setTimeout(() => {
@@ -38,17 +37,13 @@ const ResetPasswordForm = () => {
   return (
     <>
       <div className="min-h-screen flex items-center justify-center bg-[#f0f2f5] p-6 relative overflow-hidden">
-        {/* Background Decor */}
         <div className="absolute top-20 left-20 w-64 h-64 bg-emerald-100/40 rounded-full blur-[80px]"></div>
         <div className="absolute bottom-20 right-20 w-80 h-80 bg-indigo-100/40 rounded-full blur-[100px]"></div>
 
-        {/* Card Container */}
         <div className="w-full max-w-md relative">
-          {/* Glow Effect */}
           <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-indigo-500 rounded-[2.5rem] blur opacity-15"></div>
 
           <div className="relative bg-white rounded-[2.5rem] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.12)] border border-white p-10">
-            {/* Header */}
             <div className="text-center mb-10">
               <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <svg

@@ -3,8 +3,9 @@ import AlertError from "../../common/AlertError";
 import { useState } from "react";
 import { useUser } from "../../../context/authContext";
 const LoginForm = () => {
-  const [success, setSucess] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [error, setError] = useState(false);
+  const [message, setMessage] = useState("");
   const { login } = useUser();
 
   const Login = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -16,21 +17,31 @@ const LoginForm = () => {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    try {
-      await login(email, password);
-      setSucess(true);
-      form.reset();
-      setTimeout(() => {
-        setSucess(false);
-      }, 3000);
-      window.location.href = "/";
-    } catch (err) {
+    const data = await login(email, password);
+    if (data.user) {
+      try {
+        setSuccess(true);
+        setMessage("Đăng Nhập Thành Công");
+        form.reset();
+        setTimeout(() => {
+          setSuccess(false);
+        }, 3000);
+        window.location.href = "/";
+      } catch (err) {
+        setError(true);
+        setMessage("Đăng Nhập Thất Bại");
+        setTimeout(() => {
+          setError(false);
+        }, 3000);
+      }
+    } else {
       setError(true);
-      setTimeout(() => {
-        setError(false);
-      }, 3000);
+      setMessage(
+        "Tài khoản đã bị vô hiệu hoá. Vui lòng kiểm tra email để kích hoạt lại.",
+      );
     }
   };
+
   return (
     <>
       <div className="min-h-screen flex items-center justify-center bg-[#f0f2f5] p-6 relative overflow-hidden">
@@ -133,8 +144,8 @@ const LoginForm = () => {
         </div>
       </div>
 
-      {success && <AlertSuccess message="Đăng Nhập Thành Công" />}
-      {error && <AlertError message="Đăng Nhập Thất Bại" />}
+      {success && <AlertSuccess message={message} />}
+      {error && <AlertError message={message} />}
     </>
   );
 };

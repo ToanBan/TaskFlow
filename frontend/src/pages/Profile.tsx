@@ -8,7 +8,6 @@ import {
   Lock,
   X,
   Camera,
-  Save,
   ShieldCheck,
   Eye,
   EyeOff,
@@ -19,6 +18,10 @@ import AlertSuccess from "../components/common/AlertSucess";
 import AlertError from "../components/common/AlertError";
 import handleChangePassword from "../api/auth/handleChangePassword";
 import { useUser } from "../context/authContext";
+import handleEditProfile from "../api/profile/handleEditProfile";
+import handleDeleteProfile from "../api/auth/handleDeleteProfile";
+import Swal from "sweetalert2";
+import dayjs from "dayjs";
 const Profile = () => {
   const [activeTab, setActiveTab] = useState("videos");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -64,7 +67,6 @@ const Profile = () => {
       confirmNewPassword,
     );
 
-    console.log(result);
     if (result) {
       setSuccess(true);
       setMessage("Thay Đổi Mật Khẩu Thành Công");
@@ -81,8 +83,69 @@ const Profile = () => {
     }
   };
 
+  const EditProfile = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const username = formData.get("username") as string;
+    const address = formData.get("address") as string;
+    const phone = formData.get("phone") as string;
+    const description = formData.get("description") as string;
 
+    const result = await handleEditProfile(
+      username,
+      address,
+      phone,
+      description,
+    );
 
+    if (result) {
+      setSuccess(true);
+      setMessage("Chỉnh Sửa Profile Thành Công");
+      form.reset();
+      setTimeout(() => {
+        setSuccess(false);
+      }, 3000);
+    } else {
+      setError(true);
+      setMessage("Chỉnh Sửa Profile Không Thành Công");
+      setTimeout(() => {
+        setSuccess(false);
+      }, 3000);
+    }
+  };
+
+  const DeleteProfile = async () => {
+    const result = await Swal.fire({
+      title: "Bạn chắc chắn muốn xoá?",
+      text: "Tài khoản sẽ bị vô hiệu hoá!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Xoá",
+      cancelButtonText: "Huỷ",
+    });
+
+    if (result.isConfirmed) {
+      const response = await handleDeleteProfile();
+
+      if (response) {
+        Swal.fire({
+          title: "Đã xoá!",
+          text: "Tài khoản đã được vô hiệu hoá.",
+          icon: "success",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+
+        setMessage("Xóa Tài Khoản Thành Công");
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 4000);
+      }
+    }
+  };
 
   return (
     <>
@@ -105,7 +168,6 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Profile Info Section */}
         <div className="px-8 -mt-20 relative z-10">
           <div className="flex flex-col md:flex-row md:items-end gap-6">
             <div className="relative group">
@@ -135,7 +197,7 @@ const Profile = () => {
                   Mô tả
                 </h3>
                 <p className="text-gray-300 leading-relaxed text-sm">
-                  {/* {user.bio} */}
+                  {user?.description || "Chưa Có Mô Tả"}
                 </p>
               </div>
 
@@ -215,7 +277,9 @@ const Profile = () => {
                       <p className="text-[10px] uppercase font-black text-gray-600 tracking-tighter">
                         Vị trí
                       </p>
-                      {/* <p className="text-xs font-bold text-white leading-tight">{user.address}</p> */}
+                      <p className="text-xs font-bold text-white leading-tight">
+                        {user?.address}
+                      </p>
                     </div>
                   </div>
 
@@ -227,7 +291,9 @@ const Profile = () => {
                       <p className="text-[10px] uppercase font-black text-gray-600 tracking-tighter">
                         Ngày gia nhập
                       </p>
-                      {/* <p className="text-xs font-bold text-white">{user.joinDate}</p> */}
+                      <p className="text-xs font-bold text-white">
+                        {dayjs(user?.createdAt).format("DD/MM/YYYY")}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -293,70 +359,86 @@ const Profile = () => {
 
               <div className="p-10 max-h-[60vh] overflow-y-auto custom-scrollbar">
                 {editSection === "general" ? (
-                  <div className="space-y-8">
-                    {/* Avatar Upload */}
-                    <div className="flex flex-col items-center justify-center gap-4 mb-10">
-                      <div className="relative group cursor-pointer">
-                        {/* <img src={user?.avatar} className="w-28 h-28 rounded-[36px] object-cover ring-4 ring-white/5" /> */}
-                        <div className="absolute inset-0 bg-black/60 rounded-[36px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Camera size={24} />
+                  <form onSubmit={EditProfile} id="editProfileForm">
+                    <div className="space-y-8">
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                            Avatar
+                          </label>
+                          <div className="relative">
+                            <Camera
+                              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
+                              size={14}
+                            />
+                            <input
+                              name="avatar"
+                              type="file"
+                              className="w-full bg-white/5 border border-white/10 rounded-2xl pl-10 pr-5 py-4 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                            />
+                          </div>
                         </div>
-                      </div>
-                      <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">
-                        Thay đổi ảnh đại diện
-                      </p>
-                    </div>
 
-                    <div className="space-y-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
-                          Username
-                        </label>
-                        <div className="relative">
-                          <AtSign
-                            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
-                            size={14}
-                          />
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                            Username
+                          </label>
+                          <div className="relative">
+                            <AtSign
+                              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
+                              size={14}
+                            />
+                            <input
+                              name="username"
+                              type="text"
+                              defaultValue={user?.username}
+                              className="w-full bg-white/5 border border-white/10 rounded-2xl pl-10 pr-5 py-4 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                            Địa chỉ
+                          </label>
                           <input
+                            name="address"
                             type="text"
-                            defaultValue={user?.username}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl pl-10 pr-5 py-4 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                            defaultValue={user?.address}
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                            Phone
+                          </label>
+                          <input
+                            pattern="[0-9]*"
+                            inputMode="numeric"
+                            name="phone"
+                            type="text"
+                            defaultValue={user?.phone}
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                            Mô tả ngắn
+                          </label>
+                          <textarea
+                            name="description"
+                            rows={3}
+                            defaultValue={user.description}
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 resize-none"
                           />
                         </div>
                       </div>
-
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
-                          Email
-                        </label>
-                        <input
-                          type="email"
-                          defaultValue={user.email}
-                          className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
-                          Địa chỉ
-                        </label>
-                        <input
-                          type="text"
-                          defaultValue={user?.address}
-                          className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
-                          Mô tả ngắn
-                        </label>
-                        {/* <textarea rows={3} defaultValue={user.bio} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 resize-none" /> */}
-                      </div>
                     </div>
-                  </div>
+                  </form>
                 ) : (
-                  <form onSubmit={ChangePassword}>
+                  <form onSubmit={ChangePassword} id="changePasswordForm">
                     <div className="space-y-6">
                       <div className="bg-red-500/5 border border-red-500/10 p-5 rounded-[24px] flex items-center gap-4">
                         <ShieldCheck className="text-red-500" size={24} />
@@ -423,8 +505,24 @@ const Profile = () => {
                 >
                   Hủy
                 </button>
-                <button className="flex-[2] bg-red-600 py-4 rounded-2xl font-black text-[10px] uppercase hover:bg-red-700 transition-all flex items-center justify-center gap-2 shadow-xl shadow-red-900/20 tracking-[0.2em]">
-                  <Save size={16} /> Lưu thay đổi
+
+                <button
+                  onClick={DeleteProfile}
+                  className="flex-[2] bg-red-600 py-4 rounded-2xl font-black text-[10px] uppercase hover:bg-red-700 transition-all flex items-center justify-center gap-2 shadow-xl shadow-red-900/20 tracking-[0.2em]"
+                >
+                  XÓA TÀI KHOẢN
+                </button>
+
+                <button
+                  type="submit"
+                  form={
+                    editSection === "general"
+                      ? "editProfileForm"
+                      : "changePasswordForm"
+                  }
+                  className="flex-[2] bg-red-600 py-4 rounded-2xl font-black text-[10px] uppercase hover:bg-red-700 transition-all flex items-center justify-center gap-2 shadow-xl shadow-red-900/20 tracking-[0.2em]"
+                >
+                  Lưu Thay Đổi
                 </button>
               </div>
             </div>

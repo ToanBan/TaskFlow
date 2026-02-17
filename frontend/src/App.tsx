@@ -12,6 +12,7 @@ import ResetPasswordPage from "./pages/ResetPassword";
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import "./index.css";
+import ActiveAccount from "./pages/ActiveAccount";
 function App() {
   return (
     <Router>
@@ -22,6 +23,7 @@ function App() {
         <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/active-account" element={<ActiveAccount />} />
         <Route path="/" element={<Home />} />
 
         {/* <Route path="/dashboard" element={<DashboardPage />} />  */}

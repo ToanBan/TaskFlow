@@ -2,10 +2,13 @@ import { createContext, useContext, useState, useEffect } from "react";
 import api from "../lib/axios";
 import { setAccessToken } from "./tokenStore";
 
+
+
+
 interface AuthContextType {
   user: any;
   accessToken: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<any>;
   logout: () => void;
   getProfile: () => void;
 }
@@ -22,8 +25,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       { email, password },
       { withCredentials: true },
     );
+    console.log(res.data);
     setAccessTokenState(res.data.accessToken);
     setAccessToken(res.data.accessToken);
+    return res.data;
   };
 
   const getProfile = async () => {

@@ -37,10 +37,8 @@ export class AuthencationController {
     @Body('password') password: string,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { accessToken, refreshToken, user } = await this.authService.login(
-      email,
-      password,
-    );
+    const { accessToken, refreshToken, user, nonActive } =
+      await this.authService.login(email, password);
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
@@ -49,7 +47,7 @@ export class AuthencationController {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return { accessToken, user };
+    return { accessToken, user, nonActive };
   }
 
   @Post('refresh-token')
@@ -79,7 +77,7 @@ export class AuthencationController {
     return this.authService.resetPassword(
       newPassword,
       confirmNewPassword,
-      req.resetUser, 
+      req.resetUser,
     );
   }
 
@@ -94,12 +92,7 @@ export class AuthencationController {
       throw new UnauthorizedException('No token provided');
     }
     const token = authHeader.split(' ')[1];
-    console.log('-------------------------', token);
-    console.log({
-      oldPassword,
-      newPassword,
-      confirmNewPassword,
-    });
+
     return this.authService.changePassword(
       oldPassword,
       newPassword,
@@ -117,5 +110,10 @@ export class AuthencationController {
     }
 
     return this.authService.logout(token, res);
+  }
+
+  @Post('active-account')
+  async activeAccount(@Body('token') token: string) {
+    return this.authService.activeAccount(token);
   }
 }

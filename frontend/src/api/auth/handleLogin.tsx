@@ -6,10 +6,8 @@ const handleLogin = async (email: string, password: string) => {
       email,
       password,
     });
-
-    if (res.status !== 500 && res.status !== 409) {
-      return res.data;
-    }
+    console.log(res.data);
+    return res.data;
   } catch (error: any) {
     console.error(error.response?.data || error.message);
     return null;

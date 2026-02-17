@@ -11,6 +11,7 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { MailService } from 'src/mail/mail.service';
 import { Response } from 'express';
+import { error } from 'console';
 @Injectable()
 export class AuthencationService {
   constructor(
@@ -70,6 +71,35 @@ export class AuthencationService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    let isActive = existingUser.isActive;
+
+    if (!isActive) {
+      const token = this.jwtService.sign(
+        {
+          sub: existingUser.id,
+          email: existingUser.email,
+          type: 'active',
+        },
+        {
+          secret: process.env.ACTIVE_TOKEN,
+          expiresIn: '15m',
+        },
+      );
+
+      if (!existingUser.username || !existingUser.email) {
+        throw new NotFoundException('Not Found');
+      }
+
+      await this.mailService.activeAccount(
+        existingUser.email,
+        existingUser.username,
+        token,
+      );
+      return {
+        nonActive: true,
+      };
+    }
+
     const payload = {
       sub: existingUser.id,
       username: existingUser.username,
@@ -99,6 +129,7 @@ export class AuthencationService {
       accessToken,
       refreshToken,
       user: existingUser,
+      nonActive: false,
     };
   }
 
@@ -303,6 +334,38 @@ export class AuthencationService {
       return { message: 'Logout successfully' };
     } catch (error) {
       throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  async activeAccount(token: string) {
+    try {
+      const payload = this.jwtService.verify(token, {
+        secret: process.env.ACTIVE_TOKEN,
+      });
+      const email = payload.email;
+
+      const existingUser = await this.findByEmail(email);
+
+      if (!existingUser) {
+        throw new NotFoundException('Not found User');
+      }
+
+      if (existingUser.isActive) {
+        throw new BadRequestException('Account is actived');
+      }
+
+      await this.prisma.user.update({
+        where: { email },
+        data: {
+          isActive: true,
+        },
+      });
+
+      return {
+        messsage: 'Your Account is actived successfully',
+      };
+    } catch (error) {
+      throw new InternalServerErrorException('something went wrong');
     }
   }
 }
