@@ -4,6 +4,7 @@ import { AuthencationController } from './auth.controller';
 import { AuthencationService } from './auth.service';
 import { MailModule } from 'src/mail/mail.module';
 import { ResetPasswordGuard } from './guards/resetpassword.guard';
+import { CheckUser } from 'src/profile/guards/checkUser.guard';
 @Module({
   imports: [
     JwtModule.register({
@@ -14,7 +15,7 @@ import { ResetPasswordGuard } from './guards/resetpassword.guard';
     MailModule,
   ],
   controllers: [AuthencationController],
-  providers: [AuthencationService, ResetPasswordGuard],
+  providers: [AuthencationService, ResetPasswordGuard, CheckUser],
   exports: [JwtModule],
 })
 export class AuthencationModule {}

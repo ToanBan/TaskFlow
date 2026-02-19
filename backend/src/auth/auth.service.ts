@@ -11,7 +11,6 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { MailService } from 'src/mail/mail.service';
 import { Response } from 'express';
-import { error } from 'console';
 @Injectable()
 export class AuthencationService {
   constructor(
@@ -245,27 +244,23 @@ export class AuthencationService {
     oldPassword: string,
     newPassword: string,
     confirmNewPassword: string,
-    token: string,
+    contextUser: any,
   ) {
     try {
-      const payload = this.jwtService.verify(token, {
-        secret: process.env.ACCESS_TOKEN,
-      });
-      const existingUser = await this.findByEmail(payload.email);
+      const email = contextUser.email;
+      const existingUser = await this.findByEmail(email);
 
       if (!existingUser) {
         throw new NotFoundException('Not found User');
       }
 
-      console.log('old', oldPassword);
-      console.log('current', existingUser.passwordHash);
+     
 
       const isPasswordValid = await bcrypt.compare(
         oldPassword,
         existingUser.passwordHash,
       );
 
-      console.log('oooooooooooooooooo', isPasswordValid);
 
       if (!isPasswordValid) {
         throw new UnauthorizedException('Invalid email or password');
@@ -279,8 +274,7 @@ export class AuthencationService {
 
       const saltRounds = 10;
       const newHashedPassword = await bcrypt.hash(newPassword, saltRounds);
-      const email = payload.email;
-      console.log(email);
+     
       const data = await this.prisma.user.update({
         where: { email },
         data: {

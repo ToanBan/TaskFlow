@@ -14,14 +14,13 @@ export class ProfileService {
     private jwtService: JwtService,
   ) {}
 
-  async getProfile(token: string) {
+  async getProfile(contextUser: any) {
     try {
-      const payload = this.jwtService.verify(token, {
-        secret: process.env.ACCESS_TOKEN,
-      });
+      const email = contextUser.email;
+
       const user = await this.prisma.user.findUnique({
         where: {
-          email: payload.email,
+          email,
         },
       });
 

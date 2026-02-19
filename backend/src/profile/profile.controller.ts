@@ -20,12 +20,8 @@ export class ProfileController {
 
   @UseGuards(CheckUser)
   @Get('/')
-  async getProfile(@Headers('authorization') authHeader: string) {
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw new UnauthorizedException('No token provided');
-    }
-    const token = authHeader.split(' ')[1];
-    return this.profileService.getProfile(token);
+  async getProfile(@Req() req: any) {
+    return this.profileService.getProfile(req.user);
   }
 
   @UseGuards(CheckUser)

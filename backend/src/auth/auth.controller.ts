@@ -86,19 +86,15 @@ export class AuthencationController {
     @Body('oldPassword') oldPassword: string,
     @Body('newPassword') newPassword: string,
     @Body('confirmNewPassword') confirmNewPassword: string,
-    @Headers('authorization') authHeader: string,
+    @Req() req: any,
   ) {
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw new UnauthorizedException('No token provided');
-    }
-    const token = authHeader.split(' ')[1];
+   
 
     return this.authService.changePassword(
       oldPassword,
       newPassword,
       confirmNewPassword,
-      token,
-    );
+      req.user,);
   }
 
   @Post('logout')
