@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Edit3,
   Share2,
   MoreHorizontal,
   Mail,
@@ -22,6 +21,8 @@ import handleEditProfile from "../api/profile/handleEditProfile";
 import handleDeleteProfile from "../api/auth/handleDeleteProfile";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
+import AddMetaVideo from "../api/video/AddMetaVideo";
+import ConfirmAddVideo from "../api/video/ConfirmAddVideo";
 const Profile = () => {
   const [activeTab, setActiveTab] = useState("videos");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -31,7 +32,7 @@ const Profile = () => {
   const [error, setError] = useState(false);
   const [message, setMessage] = useState("");
   const { user } = useUser();
-
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const myVideos = [
     {
       id: 1,
@@ -147,6 +148,56 @@ const Profile = () => {
     }
   };
 
+  const handleUploadVideo = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+    const videoFile = formData.get("video") as File;
+    const featureVideo = formData.get("feature_video") as File;
+
+    if (!videoFile || !videoFile.type.startsWith("video/")) {
+      alert("File không hợp lệ");
+      return;
+    }
+
+    try {
+      const step1 = await AddMetaVideo(
+        title,
+        description,
+        featureVideo,
+        videoFile.type.split("/")[1],
+      );
+
+      if (!step1) return;
+
+      const uploadRes = await fetch(step1.presignedUploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": videoFile.type,
+        },
+        body: videoFile,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error("Upload MinIO thất bại");
+      }
+
+      console.log("Upload lên MinIO xong");
+      await ConfirmAddVideo(step1.videoId, videoFile.type.split("/")[1]);
+      setSuccess(true);
+      setMessage("Upload Video Thành Công");
+      setTimeout(() => {setSuccess(false);
+      }, 3000);
+      form.reset();
+    } catch (err) {
+      console.error(err);
+      alert("Có lỗi xảy ra");
+    }
+  };
+
   return (
     <>
       <div className="flex-1 h-screen bg-[#050505] text-white overflow-y-auto custom-scrollbar relative font-sans">
@@ -156,14 +207,12 @@ const Profile = () => {
             <button className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl font-bold text-xs border border-white/10 hover:bg-white/20 transition-all">
               <Share2 size={16} /> Chia sẻ
             </button>
+
             <button
-              onClick={() => {
-                setIsEditModalOpen(true);
-                setEditSection("general");
-              }}
-              className="flex items-center gap-2 bg-red-600 px-4 py-2 rounded-xl font-bold text-xs hover:bg-red-700 transition-all shadow-lg shadow-red-900/40"
+              onClick={() => setIsUploadModalOpen(true)}
+              className="relative z-20 flex items-center gap-2 bg-blue-600 px-4 py-2 rounded-xl font-bold text-xs hover:bg-blue-700 transition-all shadow-lg"
             >
-              <Edit3 size={16} /> Chỉnh sửa Profile
+              Đăng Video
             </button>
           </div>
         </div>
@@ -180,7 +229,6 @@ const Profile = () => {
                 <h1 className="text-3xl font-black tracking-tight">
                   {user?.username}
                 </h1>
-                {/* {user.isVerified && <CheckCircle2 size={24} className="text-blue-500 fill-blue-500/10" />} */}
               </div>
               <div className="flex items-center gap-2 text-gray-500 font-bold mb-4">
                 <AtSign size={14} />
@@ -525,6 +573,85 @@ const Profile = () => {
                   Lưu Thay Đổi
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {isUploadModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/90 backdrop-blur-md"
+              onClick={() => setIsUploadModalOpen(false)}
+            />
+
+            <div className="relative bg-[#0a0a0a] border border-white/10 w-full max-w-xl rounded-[40px] shadow-2xl p-10">
+              <h2 className="text-lg font-bold mb-6">Đăng Video</h2>
+
+              <form className="space-y-6" onSubmit={handleUploadVideo}>
+                <div>
+                  <label className="text-xs font-bold text-gray-400">
+                    Tiêu đề
+                  </label>
+                  <input
+                    name="title"
+                    required
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-400">
+                    Mô tả
+                  </label>
+                  <textarea
+                    name="description"
+                    rows={3}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-400">
+                    File video
+                  </label>
+                  <input
+                    name="video"
+                    type="file"
+                    accept="video/*"
+                    required
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-400">
+                    Feature Video
+                  </label>
+                  <input
+                    name="feature_video"
+                    type="file"
+                    required
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm"
+                  />
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsUploadModalOpen(false)}
+                    className="flex-1 py-4 rounded-2xl text-xs font-bold bg-white/5"
+                  >
+                    Huỷ
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="flex-1 bg-blue-600 py-4 rounded-2xl font-bold text-xs hover:bg-blue-700"
+                  >
+                    Upload
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
