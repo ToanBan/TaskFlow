@@ -107,7 +107,7 @@ export class VideoService {
     try {
       await this.prisma.video.update({
         where: { id: videoId },
-        data: { status: VideoStatus.FAILED },
+        data: { status: VideoStatus.BLOCK},
       });
       return { message: 'Video deleted successfully' };
     } catch (error) {

@@ -58,6 +58,7 @@ enum VideoStatus {
   PROCESSING
   READY
   FAILED
+  BLOCK
 }
 
 
