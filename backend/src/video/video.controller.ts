@@ -9,6 +9,8 @@ import {
   Req,
   Param,
   NotFoundException,
+  Get,
+  Delete,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -18,6 +20,7 @@ import { CheckUser } from 'src/profile/guards/checkUser.guard';
 import { MinioService } from 'src/miniO/minio.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { ImageUpload } from 'src/common/image-upload.decorator';
 @Controller('api/video')
 export class VideoController {
   constructor(
@@ -28,23 +31,7 @@ export class VideoController {
   ) {}
 
   @Post('addMetaVideo')
-  @UseInterceptors(
-    FileInterceptor('feature_video', {
-      storage: memoryStorage(),
-      fileFilter: (req, file, cb) => {
-        if (!file.originalname.match(/\.(jpg|jpeg|png|webp)$/)) {
-          return cb(
-            new BadRequestException('Chỉ chấp nhận file ảnh (jpg, png, webp)!'),
-            false,
-          );
-        }
-        cb(null, true);
-      },
-      limits: {
-        fileSize: 5 * 1024 * 1024,
-      },
-    }),
-  )
+  @ImageUpload('feature_video')
   @UseGuards(CheckUser)
   async addMetaVideo(
     @Body('title') title: string,
@@ -98,5 +85,42 @@ export class VideoController {
     return {
       message: 'Video đang được xử lý',
     };
+  }
+
+  @Get('/')
+  async getVideos() {
+    const videos = await this.videoService.getVideo();
+    return videos;
+  }
+
+  @Get('/myself')
+  @UseGuards(CheckUser)
+  async getMyVideos(@Req() req: any) {
+    const videos = await this.videoService.getVideoById(req.user);
+
+    return videos;
+  }
+
+  @Delete('/:id')
+  @UseGuards(CheckUser)
+  async deleteVideo(@Req() req: any, @Param('id') id: string) {
+    const videoId = Number(id);
+    const video = await this.videoService.findVideoById(videoId);
+    if (video.userId !== req.user.sub) {
+      throw new NotFoundException('Video not found or unauthorized');
+    }
+    await this.videoService.deleteVideo(videoId);
+    return { message: 'Video deleted successfully' };
+  }
+
+
+  @Get('/:id')
+  async getVideoById(@Param('id') id: string) {
+    const videoId = Number(id);
+    const video = await this.videoService.getVideoDetail(videoId);
+    if(!video) {
+      throw new NotFoundException('Video not found');
+    }
+    return video;
   }
 }

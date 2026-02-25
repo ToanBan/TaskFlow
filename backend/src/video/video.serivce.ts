@@ -16,12 +16,11 @@ export class VideoService {
     thumbnail: string,
   ) {
     try {
-      console.log('Saving video metadata with thumbnail URL:', userId, title, description, thumbnail);
       const newVideo = await this.prisma.video.create({
         data: {
           title: title,
           description: description,
-          thumbnailUrl: thumbnail,
+          thumbnailUrl: thumbnail.replace('vstream/', ''),
           user: {
             connect: { id: userId },
           },
@@ -50,18 +49,90 @@ export class VideoService {
     }
   }
 
-  async updateStatus(videoId:string, status:VideoStatus){
+  async updateStatus(
+    videoId: string,
+    status: VideoStatus,
+    processedUrl?: string,
+  ) {
     try {
       const existingVideo = await this.findVideoById(Number(videoId));
-      
+
       return await this.prisma.video.update({
         where: { id: existingVideo.id },
-        data: { status: status },
+        data: { status: status, processedUrl: processedUrl },
       });
-
-      
     } catch (error) {
-      throw new InternalServerErrorException("something went wrong")
+      throw new InternalServerErrorException('something went wrong');
+    }
+  }
+
+  async getVideo() {
+    try {
+      const videos = await this.prisma.video.findMany({
+        where: { status: VideoStatus.READY },
+        orderBy: { createdAt: 'desc' },
+
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              avatar: true,
+            },
+          },
+        },
+      });
+      return videos;
+    } catch (error) {
+      throw new InternalServerErrorException('something went wrong');
+    }
+  }
+
+  async getVideoById(contextUser: any) {
+    try {
+      const videos = await this.prisma.video.findMany({
+        where: {
+          userId: contextUser.sub,
+          status: VideoStatus.READY,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      return videos;
+    } catch (error) {
+      throw new InternalServerErrorException('something went wrong');
+    }
+  }
+
+  async deleteVideo(videoId: number) {
+    try {
+      await this.prisma.video.update({
+        where: { id: videoId },
+        data: { status: VideoStatus.FAILED },
+      });
+      return { message: 'Video deleted successfully' };
+    } catch (error) {
+      throw new InternalServerErrorException('something went wrong');
+    }
+  }
+
+
+  async getVideoDetail(videoId: number) {
+    try {
+      const video = await this.prisma.video.findUnique({
+        where: { id: videoId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              avatar: true,
+            },
+          },
+        },
+      });
+      return video;
+    } catch (error) {
+      throw new InternalServerErrorException('something went wrong');
     }
   }
 }

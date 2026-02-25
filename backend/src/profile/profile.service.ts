@@ -7,11 +7,13 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
+import { MinioService } from 'src/miniO/minio.service';
 @Injectable()
 export class ProfileService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private readonly minioService: MinioService,
   ) {}
 
   async getProfile(contextUser: any) {
@@ -41,6 +43,7 @@ export class ProfileService {
     address: string,
     phone: string,
     description: string,
+    avatar: Express.Multer.File | null,
   ) {
     try {
       const email = contextUser.email;
@@ -54,6 +57,14 @@ export class ProfileService {
       if (!existingUser) {
         throw new NotFoundException('Not found User');
       }
+      let avatarUrl = existingUser.avatar;
+      let objectKey: string | null = null;
+      if (avatar) {
+        objectKey = `avatars/${contextUser.sub}.webp`;
+        console.log('Uploading avatar to Minio with key:', objectKey);
+        await this.minioService.uploadWithKey(objectKey, avatar);
+        avatarUrl = objectKey
+      }
 
       await this.prisma.user.update({
         where: {
@@ -64,6 +75,7 @@ export class ProfileService {
           address: address ?? existingUser.address,
           phone: phone ?? existingUser.phone,
           description: description ?? existingUser.description,
+          avatar: avatarUrl,
         },
       });
 

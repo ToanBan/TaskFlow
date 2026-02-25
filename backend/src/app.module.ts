@@ -5,6 +5,7 @@ import { AuthencationModule } from './auth/auth.module';
 import { ProfileModule } from './profile/profile.module';
 import { VideoModule } from './video/video.module';
 import { BullModule } from '@nestjs/bullmq';
+import { AdminModule } from './admin/admin.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -19,7 +20,8 @@ import { BullModule } from '@nestjs/bullmq';
     PrismaModule,
     AuthencationModule,
     ProfileModule,
-    VideoModule
+    VideoModule, 
+    AdminModule
   ],
 })
 export class AppModule {}

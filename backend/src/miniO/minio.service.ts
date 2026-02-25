@@ -69,7 +69,6 @@ export class MinioService implements OnModuleInit {
         { 'Content-Type': file.mimetype },
       );
 
-      // Trả về URL trực tiếp để lưu vào Database
       return `${this.bucketName}/${fileName}`;
     } catch (error) {
       throw new InternalServerErrorException('Không thể tải file lên MinIO');
@@ -88,5 +87,38 @@ export class MinioService implements OnModuleInit {
 
   async getObject(objectKey: string) {
     return await this.minioClient.getObject(this.bucketName, objectKey);
+  }
+
+  async fileExists(objectKey: string): Promise<boolean> {
+    try {
+      await this.minioClient.statObject(this.bucketName, objectKey);
+      return true;
+    } catch (error) {
+      if (error.code === 'NotFound') {
+        return false;
+      }
+      throw new InternalServerErrorException('Error checking file existence');
+    }
+  }
+
+  async deleteObject(objectKey: string) {
+    try {
+      await this.minioClient.removeObject(this.bucketName, objectKey);
+      return true;
+    } catch (error) {
+      throw new InternalServerErrorException('Delete file failed');
+    }
+  }
+
+  async uploadWithKey(objectKey: string, file: Express.Multer.File) {
+    await this.minioClient.putObject(
+      this.bucketName,
+      objectKey,
+      file.buffer,
+      file.size,
+      { 'Content-Type': file.mimetype },
+    );
+
+    return `${this.bucketName}/${objectKey}`;
   }
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Share2,
   MoreHorizontal,
@@ -23,6 +23,17 @@ import Swal from "sweetalert2";
 import dayjs from "dayjs";
 import AddMetaVideo from "../api/video/AddMetaVideo";
 import ConfirmAddVideo from "../api/video/ConfirmAddVideo";
+import GetVideoByUser from "../api/video/GetVideoByUser";
+import DeleteVideo from "../api/video/DeleteVideo";
+import { Link } from "react-router-dom";
+interface VideoProps {
+  id: number;
+  title: string;
+  processedUrl: string;
+  thumbnailUrl: string;
+  createdAt: string;
+}
+
 const Profile = () => {
   const [activeTab, setActiveTab] = useState("videos");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -33,26 +44,17 @@ const Profile = () => {
   const [message, setMessage] = useState("");
   const { user } = useUser();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const myVideos = [
-    {
-      id: 1,
-      title: "Hệ thống Streaming với NestJS & Docker chuyên sâu",
-      thumbnail:
-        "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?w=800&q=80",
-      views: "150K",
-      date: "2 ngày trước",
-      duration: "14:20",
-    },
-    {
-      id: 2,
-      title: "Cách setup MinIO cho lưu trữ file cực nhanh",
-      thumbnail:
-        "https://images.unsplash.com/photo-1605745341112-85968b193ef5?w=800&q=80",
-      views: "45K",
-      date: "1 tuần trước",
-      duration: "10:15",
-    },
-  ];
+  const [videos, setVideos] = useState<VideoProps[]>([]);
+  
+  const fetchVideos = async () => {
+    const data = await GetVideoByUser();
+    console.log(data);
+    setVideos(data);
+  };
+
+  useEffect(() => {
+    fetchVideos();
+  }, []);
 
   const ChangePassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -92,12 +94,13 @@ const Profile = () => {
     const address = formData.get("address") as string;
     const phone = formData.get("phone") as string;
     const description = formData.get("description") as string;
-
+    const avatar = formData.get("avatar") as File;
     const result = await handleEditProfile(
       username,
       address,
       phone,
       description,
+      avatar,
     );
 
     if (result) {
@@ -189,12 +192,48 @@ const Profile = () => {
       await ConfirmAddVideo(step1.videoId, videoFile.type.split("/")[1]);
       setSuccess(true);
       setMessage("Upload Video Thành Công");
-      setTimeout(() => {setSuccess(false);
+      setTimeout(() => {
+        setSuccess(false);
       }, 3000);
       form.reset();
     } catch (err) {
       console.error(err);
       alert("Có lỗi xảy ra");
+    }
+  };
+
+  const handleDelete = async (videoId: number) => {
+    const result = await Swal.fire({
+      title: "Bạn có chắc không?",
+      text: "Bạn có muốn xóa video này không?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Xóa",
+      cancelButtonText: "Hủy",
+    });
+
+    if (result.isConfirmed) {
+      const res = await DeleteVideo(videoId.toString());
+      if (res) {
+        Swal.fire({
+          title: "Đã xóa!",
+          text: "Video đã được xóa.",
+          icon: "success",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        fetchVideos();
+      } else {
+        Swal.fire({
+          title: "Lỗi!",
+          text: "Xóa video thất bại.",
+          icon: "error",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      }
     }
   };
 
@@ -220,7 +259,17 @@ const Profile = () => {
         <div className="px-8 -mt-20 relative z-10">
           <div className="flex flex-col md:flex-row md:items-end gap-6">
             <div className="relative group">
-              <div className="w-40 h-40 rounded-[40px] p-1 bg-gradient-to-tr from-red-600 to-purple-600 shadow-2xl"></div>
+              <div className="w-40 h-40 rounded-[40px] p-1 bg-gradient-to-tr from-red-600 to-purple-600 shadow-2xl">
+                {user?.avatar ? (
+                  <img
+                    src={`${import.meta.env.VITE_IMAGES_URL}/${user.avatar}`}
+                    alt="Avatar"
+                    className="w-full h-full object-cover rounded-[38px]"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-700 rounded-[38px]" />
+                )}
+              </div>
               <div className="absolute bottom-3 right-3 bg-green-500 w-6 h-6 rounded-full border-4 border-[#050505] shadow-lg"></div>
             </div>
 
@@ -265,32 +314,44 @@ const Profile = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pb-12">
-                {myVideos.map((video) => (
-                  <div
-                    key={video.id}
-                    className="group bg-white/5 rounded-3xl overflow-hidden border border-white/5 hover:bg-white/[0.08] transition-all"
-                  >
-                    <div className="relative aspect-video">
-                      <img
-                        src={video.thumbnail}
-                        alt={video.title}
-                        className="w-full h-full object-cover"
-                      />
-                      <span className="absolute bottom-3 right-3 bg-black/80 backdrop-blur-md px-2 py-1 rounded-lg text-[10px] font-black">
-                        {video.duration}
-                      </span>
-                    </div>
-                    <div className="p-5">
-                      <h3 className="font-bold text-sm mb-2 line-clamp-1 group-hover:text-red-500 transition-colors">
-                        {video.title}
-                      </h3>
-                      <div className="flex items-center justify-between text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-                        <span>
-                          {video.views} Views • {video.date}
-                        </span>
+                {videos.map((video) => (
+                  <Link to={`/video/${video.id}`} key={video.id}>
+                    <div
+                      key={video.id}
+                      className="group relative bg-white/5 rounded-3xl overflow-hidden border border-white/5 hover:bg-white/[0.08] transition-all"
+                    >
+                      <div className="relative aspect-video">
+                        <img
+                          src={`${import.meta.env.VITE_IMAGES_URL}/${video.thumbnailUrl}`}
+                          alt={video.title}
+                          className="w-full h-full object-cover"
+                        />
+
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault(); 
+                            e.stopPropagation();
+                            handleDelete(video.id);
+                          }}
+                          className="absolute top-3 right-3 bg-black/60 hover:bg-black/80 text-white px-2 py-1 rounded-full text-lg"
+                        >
+                          ⋮
+                        </button>
+                      </div>
+
+                      <div className="p-5">
+                        <h3 className="font-bold text-sm mb-2 line-clamp-1 group-hover:text-red-500 transition-colors">
+                          {video.title}
+                        </h3>
+
+                        <div className="flex items-center justify-between text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                          <span>
+                            {dayjs(video.createdAt).format("DD/MM/YYYY")}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -478,7 +539,7 @@ const Profile = () => {
                           <textarea
                             name="description"
                             rows={3}
-                            defaultValue={user.description}
+                            defaultValue={user?.description}
                             className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 resize-none"
                           />
                         </div>

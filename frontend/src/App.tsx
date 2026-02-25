@@ -13,6 +13,8 @@ import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import "./index.css";
 import ActiveAccount from "./pages/ActiveAccount";
+import VideoDetail from "./pages/VideoDetail";
+import Admin from "./pages/Admin";
 function App() {
   return (
     <Router>
@@ -25,11 +27,13 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/active-account" element={<ActiveAccount />} />
         <Route path="/" element={<Home />} />
-
+        <Route path="/video/:id" element={<VideoDetail />} />
+        <Route path="/admin" element={<Admin />} />
         {/* <Route path="/dashboard" element={<DashboardPage />} />  */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
+    
   );
 }
 

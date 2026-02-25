@@ -33,41 +33,74 @@ export class VideoProcessor extends WorkerHost {
           '-pix_fmt yuv420p',
         ])
         .format('mp4')
-        .on('end', () => resolve())
-        .on('error', (err) => reject(err))
+        .on('end', resolve)
+        .on('error', reject)
         .save(outputPath);
     });
   }
 
-  private transcodeVideo(
-    inputPath: string,
-    outputPath: string,
-    height: number,
-  ): Promise<void> {
+  private encodeHLS(inputPath: string, outputDir: string): Promise<void> {
     return new Promise((resolve, reject) => {
       ffmpeg(inputPath)
-        .size(`?x${height}`)
-        .outputOptions([
-          '-c:v libx264',
-          '-preset fast',
-          '-crf 23',
-          '-c:a aac',
-          '-b:a 128k',
+        .addOptions([
+          '-preset',
+          'veryfast',
+          '-g',
+          '48',
+          '-sc_threshold',
+          '0',
+
+          '-map',
+          '0:v:0',
+          '-map',
+          '0:a:0?',
+
+          '-c:v',
+          'libx264',
+          '-c:a',
+          'aac',
+
+          '-var_stream_map',
+          'v:0,a:0',
+
+          '-f',
+          'hls',
+          '-hls_time',
+          '6',
+          '-hls_playlist_type',
+          'vod',
+          '-hls_segment_filename',
+          path.join(outputDir, 'segment_%03d.ts'),
         ])
-        .on('end', () => resolve())
-        .on('error', (err) => reject(err))
-        .save(outputPath);
+        .output(path.join(outputDir, 'index.m3u8'))
+        .on('end', resolve)
+        .on('error', (err, stdout, stderr) => {
+          console.log(stderr);
+          reject(err);
+        })
+        .run();
     });
   }
 
-
-  private getVideoMetadata(inputPath: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-      ffmpeg.ffprobe(inputPath, (err, metadata) => {
-        if (err) reject(err);
-        else resolve(metadata);
+  private async uploadDirectory(localDir: string, remoteBase: string) {
+    const walk = (dir: string): string[] => {
+      return fs.readdirSync(dir).flatMap((file) => {
+        const fullPath = path.join(dir, file);
+        if (fs.statSync(fullPath).isDirectory()) {
+          return walk(fullPath);
+        }
+        return [fullPath];
       });
-    });
+    };
+
+    const files = walk(localDir);
+
+    for (const file of files) {
+      const relativePath = path.relative(localDir, file).replace(/\\/g, '/');
+
+      const objectKey = `${remoteBase}/${relativePath}`;
+      await this.minioService.uploadFromPath(objectKey, file);
+    }
   }
 
   async process(job: Job): Promise<any> {
@@ -82,71 +115,44 @@ export class VideoProcessor extends WorkerHost {
 
     const originalPath = path.join(tmpDir, `${videoId}.${videoType}`);
     const normalizedPath = path.join(tmpDir, `${videoId}_normalized.mp4`);
-
-    const TARGET_QUALITIES = [1080, 720, 480, 360];
+    const hlsOutputDir = path.join(tmpDir, `${videoId}_hls`);
 
     try {
       await this.videoService.updateStatus(videoId, 'PROCESSING');
 
+      // 1️⃣ Download file từ MinIO
       const objectStream = await this.minioService.getObject(objectKey);
       await pipeline(objectStream, fs.createWriteStream(originalPath));
 
       console.log('Download xong file gốc');
 
-      console.log('Đang normalize về MP4...');
+      // 2️⃣ Normalize
+      console.log('Đang normalize...');
       await this.normalizeVideo(originalPath, normalizedPath);
       console.log('Normalize xong');
 
-      const metadata = await this.getVideoMetadata(normalizedPath);
-
-      const videoStream = metadata.streams.find(
-        (s) => s.codec_type === 'video',
-      );
-
-      if (!videoStream) {
-        throw new Error('Không tìm thấy video stream');
+      // 3️⃣ Tạo thư mục HLS
+      if (!fs.existsSync(hlsOutputDir)) {
+        fs.mkdirSync(hlsOutputDir);
       }
 
-      const originalHeight = videoStream.height;
-      console.log('Original height:', originalHeight);
+      // 4️⃣ Encode HLS adaptive
+      console.log('Đang encode HLS...');
+      await this.encodeHLS(normalizedPath, hlsOutputDir);
+      console.log('Encode HLS xong');
 
-      const createdFiles: string[] = [];
+      // 5️⃣ Upload toàn bộ folder HLS lên MinIO
+      await this.uploadDirectory(hlsOutputDir, `processed/${videoId}`);
+      const processedUrl = `processed/${videoId}/index.m3u8`;
+      console.log('Upload HLS xong');
 
-      for (const height of TARGET_QUALITIES) {
-        if (originalHeight >= height) {
-          const outputPath = path.join(tmpDir, `${videoId}_${height}p.mp4`);
+      // 6️⃣ Cleanup
+      if (fs.existsSync(originalPath)) fs.unlinkSync(originalPath);
+      if (fs.existsSync(normalizedPath)) fs.unlinkSync(normalizedPath);
+      if (fs.existsSync(hlsOutputDir))
+        fs.rmSync(hlsOutputDir, { recursive: true, force: true });
 
-          console.log(`Đang encode ${height}p...`);
-          await this.transcodeVideo(normalizedPath, outputPath, height);
-
-          console.log(`Encode xong ${height}p`);
-
-          await this.minioService.uploadFromPath(
-            `processed/${videoId}/${height}p.mp4`,
-            outputPath,
-          );
-
-          createdFiles.push(outputPath);
-        }
-      }
-
-      console.log('Upload xong tất cả quality');
-
-      if (fs.existsSync(originalPath)) {
-        fs.unlinkSync(originalPath);
-      }
-
-      if (fs.existsSync(normalizedPath)) {
-        fs.unlinkSync(normalizedPath);
-      }
-
-      for (const file of createdFiles) {
-        if (fs.existsSync(file)) {
-          fs.unlinkSync(file);
-        }
-      }
-
-      await this.videoService.updateStatus(videoId, 'READY');
+      await this.videoService.updateStatus(videoId, 'READY', processedUrl);
 
       console.log('Xử lý hoàn tất:', videoId);
 
@@ -156,13 +162,10 @@ export class VideoProcessor extends WorkerHost {
 
       await this.videoService.updateStatus(videoId, 'FAILED');
 
-      if (fs.existsSync(originalPath)) {
-        fs.unlinkSync(originalPath);
-      }
-
-      if (fs.existsSync(normalizedPath)) {
-        fs.unlinkSync(normalizedPath);
-      }
+      if (fs.existsSync(originalPath)) fs.unlinkSync(originalPath);
+      if (fs.existsSync(normalizedPath)) fs.unlinkSync(normalizedPath);
+      if (fs.existsSync(hlsOutputDir))
+        fs.rmSync(hlsOutputDir, { recursive: true, force: true });
 
       throw error;
     }

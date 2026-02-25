@@ -15,6 +15,9 @@ const Header: React.FC = () => {
   const { user } = useUser();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [error, setError] = useState(false);
+
+  console.log(user);
+
   const Logout = async () => {
     const result = await handleLogout();
     if (result) {
