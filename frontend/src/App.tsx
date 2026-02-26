@@ -15,6 +15,7 @@ import "./index.css";
 import ActiveAccount from "./pages/ActiveAccount";
 import VideoDetail from "./pages/VideoDetail";
 import Admin from "./pages/Admin";
+import AdminRoute from "./components/Auth/components/AdminRoute";
 function App() {
   return (
     <Router>
@@ -28,12 +29,18 @@ function App() {
         <Route path="/active-account" element={<ActiveAccount />} />
         <Route path="/" element={<Home />} />
         <Route path="/video/:id" element={<VideoDetail />} />
-        <Route path="/admin" element={<Admin />} />
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <Admin />
+            </AdminRoute>
+          }
+        />
         {/* <Route path="/dashboard" element={<DashboardPage />} />  */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
-    
   );
 }
 

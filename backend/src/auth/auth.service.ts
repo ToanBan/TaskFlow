@@ -78,6 +78,7 @@ export class AuthencationService {
           sub: existingUser.id,
           email: existingUser.email,
           type: 'active',
+          role: existingUser.role,
         },
         {
           secret: process.env.ACTIVE_TOKEN,
@@ -103,6 +104,7 @@ export class AuthencationService {
       sub: existingUser.id,
       username: existingUser.username,
       email: existingUser.email,
+      role: existingUser.role
     };
 
     const accessToken = await this.jwtService.signAsync(payload, {
@@ -167,6 +169,7 @@ export class AuthencationService {
           sub: payload.sub,
           email: payload.email,
           username: payload.username,
+          role:payload.role
         },
         {
           secret: process.env.ACCESS_TOKEN,

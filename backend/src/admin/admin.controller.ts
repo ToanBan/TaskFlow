@@ -7,26 +7,26 @@ export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @Get('/count-status-video')
-  // @UseGuards(CheckAdminGuard)
+  @UseGuards(CheckAdminGuard)
   async countStatusVideo() {
     return this.adminService.countStatusVideo();
   }
 
   @Get('/all-video')
-  // @UseGuards(CheckAdminGuard)
+  @UseGuards(CheckAdminGuard)
   async getAllVideo() {
     return this.adminService.getAllVideo();
   }
 
   @Delete('/videos/:id')
-  // @UseGuards(CheckAdminGuard)
+  @UseGuards(CheckAdminGuard)
   async deleteVideo(@Param('id') id: string) {
     console.log('id', id);
     return this.adminService.deleteVideo(Number(id))    ;
   }
 
   @Post('/videos/:id')
-  // @UseGuards(CheckAdminGuard)
+  @UseGuards(CheckAdminGuard)
   async blockVideo(@Param('id') id: string) {
     return this.adminService.openVideo(Number(id));
   }
