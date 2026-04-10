@@ -92,11 +92,10 @@ Sử dụng MinIO làm object storage:
 - Node.js
 - NestJS
 - Prisma ORM
-- PostgreSQL
+- MYSQL
 - Bull Queue
 - FFmpeg
 - MinIO
-- MySQL
 - Docker
 
 ### Frontend

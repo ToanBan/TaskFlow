@@ -120,33 +120,28 @@ export class VideoProcessor extends WorkerHost {
     try {
       await this.videoService.updateStatus(videoId, 'PROCESSING');
 
-      // 1️⃣ Download file từ MinIO
       const objectStream = await this.minioService.getObject(objectKey);
       await pipeline(objectStream, fs.createWriteStream(originalPath));
 
       console.log('Download xong file gốc');
 
-      // 2️⃣ Normalize
       console.log('Đang normalize...');
       await this.normalizeVideo(originalPath, normalizedPath);
       console.log('Normalize xong');
 
-      // 3️⃣ Tạo thư mục HLS
       if (!fs.existsSync(hlsOutputDir)) {
         fs.mkdirSync(hlsOutputDir);
       }
 
-      // 4️⃣ Encode HLS adaptive
       console.log('Đang encode HLS...');
       await this.encodeHLS(normalizedPath, hlsOutputDir);
       console.log('Encode HLS xong');
 
-      // 5️⃣ Upload toàn bộ folder HLS lên MinIO
       await this.uploadDirectory(hlsOutputDir, `processed/${videoId}`);
       const processedUrl = `processed/${videoId}/index.m3u8`;
       console.log('Upload HLS xong');
 
-      // 6️⃣ Cleanup
+  
       if (fs.existsSync(originalPath)) fs.unlinkSync(originalPath);
       if (fs.existsSync(normalizedPath)) fs.unlinkSync(normalizedPath);
       if (fs.existsSync(hlsOutputDir))
